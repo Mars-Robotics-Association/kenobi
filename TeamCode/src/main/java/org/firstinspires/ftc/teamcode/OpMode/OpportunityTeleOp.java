@@ -25,14 +25,27 @@ public class OpportunityTeleOp extends OpMode implements ControllerInputListener
     private ControllerInput controllerInput1;
     private ControllerInput controllerInput2;
 
-    private DcMotor FR;
-    private DcMotor FL;
-    private DcMotor RR;
-    private DcMotor RL;
+//declare wheel motors
+    private DcMotor FR;//front right wheel
+    private DcMotor FL;//front left wheel
+    private DcMotor RR;//rear right wheel
+    private DcMotor RL;//rear left wheel
 
-    private CRServo wobbleCR;
-    private Servo leftServo;
-    private Servo rightServo;
+    private DcMotor shooterLeft;
+    private DcMotor shooterRight;
+
+
+    private CRServo intakeServo;
+    private CRServo feedServo;
+
+    private CRServo wobbleLiftServo;
+    private Servo wobbleLeftServo;
+    private Servo wobbleRightServo;
+
+
+    //private CRServo wobbleCR;
+   // private Servo leftServo;
+   // private Servo rightServo;
 
 
  //   private Servo liftservo;
@@ -56,19 +69,27 @@ public class OpportunityTeleOp extends OpMode implements ControllerInputListener
     private boolean ArmPos = false;
     private boolean ArmNeg = false;
 
-//map wheels FR, FL, RR, RL to the robot configuration
         @Override
         public void init() {
+            //map the wheels to the robot configuration
             FR = hardwareMap.dcMotor.get("FR");
             FL = hardwareMap.dcMotor.get("FL");
             RR = hardwareMap.dcMotor.get("RR");
             RL = hardwareMap.dcMotor.get("RL");
 
-            //map the lift and the arms to the robot configuration
+            shooterLeft = hardwareMap.dcMotor.get("shooterLeft");
+            shooterRight = hardwareMap.dcMotor.get("shooterRight");
 
-            wobbleCR = hardwareMap.crservo.get("wobbleCRServo");
-            leftServo = hardwareMap.servo.get("leftServo");
-            rightServo = hardwareMap.servo.get("rightServo");
+            //map the wobble lift and the wobble arms to the robot configuration
+            wobbleLiftServo = hardwareMap.crservo.get("wobbleLiftServo");
+            wobbleLeftServo = hardwareMap.servo.get("wobbleLeftServo");
+           wobbleRightServo = hardwareMap.servo.get("wobbleRightServo");
+
+           //map the intake, feed, and shooter to the robot configuration
+            intakeServo = hardwareMap.crservo.get("intakeServo");
+            feedServo = hardwareMap.crservo.get("feedServo");
+
+
 
 
             wobble = new WobbleGoalController();
@@ -136,20 +157,20 @@ public class OpportunityTeleOp extends OpMode implements ControllerInputListener
 
 
         if(gamepad1.a){
-            leftServo.setPosition(0);
-            rightServo.setPosition(1);
+            wobbleLeftServo.setPosition(0);
+            wobbleRightServo.setPosition(1);
         }
 
         if(gamepad1.b){
-            leftServo.setPosition(1);
-            rightServo.setPosition(0);//reverses the direction of the arm
+            wobbleLeftServo.setPosition(1);
+            wobbleRightServo.setPosition(0);//reverses the direction of the arm
         }
 
         if(gamepad1.dpad_up){
-            wobbleCR.setPower(1);
+            wobbleLiftServo.setPower(1);
         }
         if(gamepad1.dpad_down){
-            wobbleCR.setPower(-1);
+            wobbleLiftServo.setPower(-1);
 
         }
         //if(gamepad1.dpad_up==false && gamepad1.dpad_down==false){
@@ -158,14 +179,14 @@ public class OpportunityTeleOp extends OpMode implements ControllerInputListener
         //}
 
 //comment
-        if(gamepad1.left_stick_y>0.5)
+        if(gamepad2.left_stick_y>0.5)
 
-        FL.setPower(gamepad1.left_stick_y);
-        RL.setPower(gamepad1.left_stick_y);
+        FL.setPower(gamepad2.left_stick_y);
+        RL.setPower(gamepad2.left_stick_y);
 
 
-        FR.setPower(gamepad1.right_stick_y);
-        RR.setPower(gamepad1.right_stick_y);
+        FR.setPower(gamepad2.right_stick_y);
+        RR.setPower(gamepad2.right_stick_y);
 
 
 
