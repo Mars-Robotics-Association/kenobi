@@ -1,32 +1,44 @@
-package org.firstinspires.ftc.teamcode.OpMode;
+package org.firstinspires.ftc.teamcode.MechanicalControl.Kenobi;
 
 import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.teamcode.Core.Input.ControllerInput;
 import org.firstinspires.ftc.teamcode.Core.Input.ControllerInputListener;
-import org.firstinspires.ftc.teamcode.Core.Robots.CuriosityUltimateGoalControl;
+
+//import org.firstinspires.ftc.teamcode.Core.Robots.CuriosityUltimateGoalControl;
+
 import org.firstinspires.ftc.teamcode.Core.Robots.MecanumBaseControl;
-import org.firstinspires.ftc.teamcode.MechanicalControl.Kenobi.IntakeController;
-import org.firstinspires.ftc.teamcode.MechanicalControl.Kenobi.ShooterController;
 import org.firstinspires.ftc.teamcode.MechanicalControl.Kenobi.WobbleGoalController;
 
-import java.util.jar.Attributes;
-
-@TeleOp(name = "Kenobi TeleOp", group = "Competition")
+@TeleOp(name = "KenobiMasterTeleOp")
 @Config
-public class OpportunityTeleOp extends OpMode implements ControllerInputListener
-{
+public class KenobiMasterTeleop extends OpMode implements ControllerInputListener {
     ////Dependencies////
+    private WobbleGoalController wobble;
     private MecanumBaseControl control;
     private ControllerInput controllerInput1;
     private ControllerInput controllerInput2;
-    private WobbleGoalController wobble;
-    private IntakeController intake;
-    private ShooterController shooter;
+
+    private DcMotor FR;
+    private DcMotor FL;
+    private DcMotor RR;
+    private DcMotor RL;
+
+    private CRServo wobbleCR;
+    private Servo leftServo;
+    private Servo rightServo;
+
+
+    //   private Servo liftservo;
+    //  private Servo leftarm;
+    //  private Servo rightarm;
+
+
     ////Variables////
     //Tweaking Vars
     public static double driveSpeed = 1;//used to change how fast robot drives
@@ -39,34 +51,30 @@ public class OpportunityTeleOp extends OpMode implements ControllerInputListener
 
     private int payloadController = 2;
 
+    private double ArmMultiplier = 1;
+    private boolean ArmPos = false;
+    private boolean ArmNeg = false;
+
     @Override
     public void init() {
+        FR = hardwareMap.dcMotor.get("FR");
+        FL = hardwareMap.dcMotor.get("FL");
+        RR = hardwareMap.dcMotor.get("RR");
+        RL = hardwareMap.dcMotor.get("RL");
+
+        wobbleCR = hardwareMap.crservo.get("wobbleCRServo");
+        leftServo = hardwareMap.servo.get("leftServo");
+        rightServo = hardwareMap.servo.get("rightServo");
+
         wobble = new WobbleGoalController();
-        wobble.Init(
-                hardwareMap.crservo.get("wobbleCRServo"),
-                hardwareMap.servo.get("leftServo"),
-                hardwareMap.servo.get("rightServo")
-        );
-
-        control = new MecanumBaseControl(this, true, true, true);
+        wobble.Init(hardwareMap.crservo.get("liftservo"), hardwareMap.servo.get("leftarm"), hardwareMap.servo.get("rightarm"));
+        control = new MecanumBaseControl(this, true, true, false);
         control.InitCoreRobotModules();
+        // Stashed changes
 
-        intake = new IntakeController();
-        intake.Init(new CRServo[]{
-                hardwareMap.crservo.get("intake_1"),
-                hardwareMap.crservo.get("intake_2"),
-                hardwareMap.crservo.get("intake_3")
-        });
-
-        shooter = new ShooterController();
-        shooter.Init(new DcMotor[]{
-                hardwareMap.dcMotor.get("shooter_1"),
-                hardwareMap.dcMotor.get("shooter_2")
-        });
-
+        controllerInput2 = new ControllerInput(gamepad2, 2);
         controllerInput1 = new ControllerInput(gamepad1, 1);
         controllerInput1.addListener(this);
-        controllerInput2 = new ControllerInput(gamepad2, 2);
         controllerInput2.addListener(this);
 
         telemetry.addData("Speed Multiplier", speedMultiplier);
@@ -74,41 +82,88 @@ public class OpportunityTeleOp extends OpMode implements ControllerInputListener
     }
 
     @Override
-    public void start(){control.StartCoreRobotModules();}
+    public void start() {
+        control.StartCoreRobotModules();
+        wobble.start();
+    }
 
-    private final double ArmMultiplier = 2;
-    private double ArmDirection = 0;
-    private boolean LeftBumper = false;
-    private boolean RightBumper = false;
-    private String item = "Nothing";
 
     @Override
     public void loop() {
+
+
         controllerInput1.Loop();
         controllerInput2.Loop();
 
-        if(!busy) {
+        if (!busy) {
             ManageDriving();
         }
+        // if(LeftBumper){ArmDirection++;}
+        // if(RightBumper){ArmDirection--;}
+        //wobble.SetWobbleLiftPower(ArmDirection*ArmMultiplier);
 
-        if(LeftBumper){ArmDirection++;}
-        if(RightBumper){ArmDirection--;}
-        wobble.SetWobbleLiftPower(ArmDirection*ArmMultiplier);
+        int dir = 0;
 
+        if (ArmPos) {
+            dir++;
+        }
+        if (ArmNeg) {
+            dir--;
+        }
+
+        wobble.SetWobbleLiftPower(dir * ArmMultiplier);
+
+        wobble.Loop();
 
 
     }
 
     private void ManageDriving() {
-        double moveX = -gamepad1.left_stick_y*driveSpeed*speedMultiplier;
-        double moveY = -gamepad1.left_stick_x*driveSpeed*speedMultiplier;
-        double turn = gamepad1.right_stick_x*turnSpeed*speedMultiplier + turnOffset;
-        control.GetOrion().MoveRaw(moveX, moveY, turn);
+        double moveX = -gamepad1.left_stick_y * driveSpeed * speedMultiplier;
+        double moveY = -gamepad1.left_stick_x * driveSpeed * speedMultiplier;
+        double turn = gamepad1.right_stick_x * turnSpeed * speedMultiplier + turnOffset;
+
+
+        if (gamepad1.a) {
+            leftServo.setPosition(1);
+            rightServo.setPosition(1);
+        }
+
+        if (gamepad1.b) {
+            leftServo.setPosition(0);
+            rightServo.setPosition(0);
+        }
+
+        if (gamepad1.dpad_up) {
+            wobbleCR.setPower(1);
+        }
+        if (gamepad1.dpad_down) {
+            wobbleCR.setPower(-1);
+
+        }
+        //if(gamepad1.dpad_up==false && gamepad1.dpad_down==false){
+        //    wobbleCR.setPower(0);
+
+        //}
+
+
+        FL.setPower(gamepad1.left_stick_y);
+        RL.setPower(gamepad1.left_stick_y);
+
+
+        FR.setPower(gamepad1.right_stick_y);
+        RR.setPower(gamepad1.right_stick_y);
+
+
+        // FL.setPower(gamepad1.left_stick_y);
+
+
+        //   control.GetOrion().MoveRaw(moveX, moveY, turn);
     }
 
     @Override
     public void APressed(double controllerNumber) {
-        if(controllerNumber == 1) {
+        if (controllerNumber == 1) {
             if (speedMultiplier == 1) speedMultiplier = 0.5;
             else if (speedMultiplier == 0.5) speedMultiplier = 0.25;
             else speedMultiplier = 1;
@@ -117,43 +172,21 @@ public class OpportunityTeleOp extends OpMode implements ControllerInputListener
 
     @Override
     public void BPressed(double controllerNumber) {
-        if(controllerNumber == 1) {
-
-            if (!item.equals("Nothing")) {
-                item = "Nothing";
-                wobble.ReleaseArm();
-            }
-
-            if (item.equals("Nothing")) {
-                item = "Wobble";
-                wobble.GrabWobbleGoal();
-            }
-
+        if (controllerNumber == 1) {
+            wobble.RaiseWobbleLift();
         }
     }
 
     @Override
     public void XPressed(double controllerNumber) {
-        if(controllerNumber == 2) {
-            shooter.SetShooterPower(2);
+        if (controllerNumber == 1) {
+            wobble.LowerWobbleLift();
         }
     }
 
     @Override
     public void YPressed(double controllerNumber) {
-        if(controllerNumber == 1) {
 
-            if (!item.equals("Nothing")) {
-                item = "Nothing";
-                wobble.ReleaseArm();
-            }
-
-            if (item.equals("Nothing")) {
-                item = "Ring";
-                wobble.GrabRing();
-            }
-
-        }
     }
 
     @Override
@@ -180,15 +213,12 @@ public class OpportunityTeleOp extends OpMode implements ControllerInputListener
     }
 
     @Override
-    public void BReleased(double controllerNumber)  {
+    public void BReleased(double controllerNumber) {
 
     }
 
     @Override
     public void XReleased(double controllerNumber) {
-        if(controllerNumber == 2) {
-            shooter.SetShooterPower(0);
-        }
     }
 
     @Override
@@ -197,33 +227,26 @@ public class OpportunityTeleOp extends OpMode implements ControllerInputListener
 
     @Override
     public void LBPressed(double controllerNumber) {
-        if(controllerNumber == 1) {
-            LeftBumper = true;
+        if (controllerNumber == 1) {
+            ArmPos = true;
         }
     }
 
     @Override
     public void RBPressed(double controllerNumber) {
-        if(controllerNumber == 1) {
-            RightBumper = true;
+        if (controllerNumber == 1) {
+            ArmPos = true;
         }
     }
 
     @Override
     public void LTPressed(double controllerNumber) {
-        if(controllerNumber == 1){
-            wobble.RaiseWobbleLift();
-        }
+
     }
 
     @Override
     public void RTPressed(double controllerNumber) {
-        if(controllerNumber == 1){
-            wobble.LowerWobbleLift();
-        }
-        if(controllerNumber == 2) {
-            intake.SetIntakePower(2);
-        }
+
     }
 
     @Override
@@ -247,15 +270,15 @@ public class OpportunityTeleOp extends OpMode implements ControllerInputListener
 
     @Override
     public void LBReleased(double controllerNumber) {
-        if(controllerNumber == 1) {
-            LeftBumper = false;
+        if (controllerNumber == 1) {
+            ArmPos = false;
         }
     }
 
     @Override
     public void RBReleased(double controllerNumber) {
-        if(controllerNumber == 1) {
-            RightBumper = false;
+        if (controllerNumber == 1) {
+            ArmNeg = false;
         }
     }
 
@@ -266,8 +289,6 @@ public class OpportunityTeleOp extends OpMode implements ControllerInputListener
 
     @Override
     public void RTReleased(double controllerNumber) {
-        if(controllerNumber == 2) {
-            intake.SetIntakePower(0);
-        }
+
     }
 }
