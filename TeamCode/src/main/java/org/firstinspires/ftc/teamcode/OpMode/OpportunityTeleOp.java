@@ -15,7 +15,7 @@ import org.firstinspires.ftc.teamcode.Core.Input.ControllerInputListener;
 import org.firstinspires.ftc.teamcode.Core.Robots.MecanumBaseControl;
 import org.firstinspires.ftc.teamcode.MechanicalControl.Kenobi.WobbleGoalController;
 
-@TeleOp(name = "Kenobi TeleOp", group = "Competition")
+@TeleOp(name = "OpportunityTeleOp", group = "Competition")
 @Config
 public class OpportunityTeleOp extends OpMode implements ControllerInputListener
 {
